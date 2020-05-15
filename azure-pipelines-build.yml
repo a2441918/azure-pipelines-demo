@@ -1,3 +1,10 @@
+variables:
+  # Agent VM image name
+  vmImageName: 'ubuntu-latest'
+
+  # Working Directory
+  workingDirectory: '$(System.DefaultWorkingDirectory)/'
+
 stages:
   - stage: Build
       displayName: Build stage
