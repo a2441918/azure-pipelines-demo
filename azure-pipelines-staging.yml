@@ -29,7 +29,7 @@ variables:
   workingDirectory: '$(System.DefaultWorkingDirectory)/'
 
 stages:
-  extends: build-stage.yml
+  - template: build-stage.yml
 
   - stage: Deploy
     displayName: Deploy stage
