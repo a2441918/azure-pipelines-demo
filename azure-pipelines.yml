@@ -2,25 +2,23 @@
 # Build a Python function app and deploy it to Azure as a Linux function app.
 # Add steps that analyze code, save build artifacts, deploy, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/python
-# This should run on when any PR is created, except when a PR is created from staging -> production branch
-# Build should only be deployed after PR is merged into staging branch. The staging build is to be deployed into staging server.
+# The build should only run when a PR is opened ONLY from staging to production branch
+# Build deploy should happen only after the PR is merged into production branch
 
 trigger:
-  - staging
+  - production
 
 pr:
   branches:
     include:
-      - '*'
-    exclude:
-      - production
+      - staging
 
 variables:
   # Azure Resource Manager connection created during pipeline creation
-  azureSubscription: 'xxxxxxxxxxxxx'
+  azureSubscription: 'xxxxxxxxxxxx'
 
   # Function app name
-  functionAppName: 'function-app'
+  functionAppName: 'function-app-prod'
 
   # Agent VM image name
   vmImageName: 'ubuntu-latest'
@@ -34,24 +32,24 @@ stages:
   - stage: Deploy
     displayName: Deploy stage
     dependsOn: Build
-    condition: and(succeeded(), eq(variables['build.SourceBranchName'], 'staging'))
+    condition: and(succeeded(), eq(variables['build.SourceBranchName'], 'production'))
 
     jobs:
-    - deployment: Deploy
-      displayName: Deploy
-      environment: 'development'
-      pool:
-        vmImage: $(vmImageName)
+      - deployment: Deploy
+        displayName: Deploy
+        environment: 'production'
+        pool:
+          vmImage: $(vmImageName)
 
-      strategy:
-        runOnce:
-          deploy:
+        strategy:
+          runOnce:
+            deploy:
 
-            steps:
-            - task: AzureFunctionApp@1
-              displayName: 'Azure functions app deploy'
-              inputs:
-                azureSubscription: '$(azureSubscription)'
-                appType: functionAppLinux
-                appName: $(functionAppName)
-                package: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'
+              steps:
+                - task: AzureFunctionApp@1
+                  displayName: 'Azure functions app deploy'
+                  inputs:
+                    azureSubscription: '$(azureSubscription)'
+                    appType: functionAppLinux
+                    appName: $(functionAppName)
+                    package: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'
