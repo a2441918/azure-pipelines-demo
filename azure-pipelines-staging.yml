@@ -6,7 +6,7 @@
 # Build should only be deployed after PR is merged into staging branch. The staging build is to be deployed into staging server.
 
 trigger:
-- staging
+  - staging
 
 pr:
   branches:
@@ -29,69 +29,29 @@ variables:
   workingDirectory: '$(System.DefaultWorkingDirectory)/'
 
 stages:
-- stage: Build
-  displayName: Build stage
+  extends: build-stage.yml
 
-  jobs:
-  - job: Build
-    displayName: Build
-    pool:
-      vmImage: $(vmImageName)
+  - stage: Deploy
+    displayName: Deploy stage
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['build.SourceBranchName'], 'staging'))
 
-    steps:
-    - bash: |
-        if [ -f extensions.csproj ]
-        then
-            dotnet build extensions.csproj --runtime ubuntu.16.04-x64 --output ./bin
-        fi
-      workingDirectory: $(workingDirectory)
-      displayName: 'Build extensions'
+    jobs:
+    - deployment: Deploy
+      displayName: Deploy
+      environment: 'development'
+      pool:
+        vmImage: $(vmImageName)
 
-    - task: UsePythonVersion@0
-      displayName: 'Use Python 3.6'
-      inputs:
-        versionSpec: 3.6 # Functions V2 supports Python 3.6 as of today
+      strategy:
+        runOnce:
+          deploy:
 
-    - bash: |
-        python -m venv worker_venv
-        source worker_venv/bin/activate
-        pip install -r requirements.txt
-      workingDirectory: $(workingDirectory)
-      displayName: 'Install application dependencies'
-
-    - task: ArchiveFiles@2
-      displayName: 'Archive files'
-      inputs:
-        rootFolderOrFile: '$(workingDirectory)'
-        includeRootFolder: false
-        archiveType: zip
-        archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
-        replaceExistingArchive: true
-
-    - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
-      artifact: staging
-
-- stage: Deploy
-  displayName: Deploy stage
-  dependsOn: Build
-  condition: and(succeeded(), eq(variables['build.SourceBranchName'], 'staging'))
-
-  jobs:
-  - deployment: Deploy
-    displayName: Deploy
-    environment: 'development'
-    pool:
-      vmImage: $(vmImageName)
-
-    strategy:
-      runOnce:
-        deploy:
-
-          steps:
-          - task: AzureFunctionApp@1
-            displayName: 'Azure functions app deploy'
-            inputs:
-              azureSubscription: '$(azureSubscription)'
-              appType: functionAppLinux
-              appName: $(functionAppName)
-              package: '$(Pipeline.Workspace)/staging/$(Build.BuildId).zip'
+            steps:
+            - task: AzureFunctionApp@1
+              displayName: 'Azure functions app deploy'
+              inputs:
+                azureSubscription: '$(azureSubscription)'
+                appType: functionAppLinux
+                appName: $(functionAppName)
+                package: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'
