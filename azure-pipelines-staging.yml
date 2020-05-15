@@ -24,27 +24,27 @@ variables:
 stages:
   - template: azure-pipelines-build.yml
 
-- stage: Deploy
-  displayName: Deploy stage
-  dependsOn: Build
-  condition: and(succeeded(), eq(variables['build.SourceBranchName'], 'staging'))
+  - stage: Deploy
+    displayName: Deploy stage
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['build.SourceBranchName'], 'staging'))
 
-  jobs:
-  - deployment: Deploy
-    displayName: Deploy
-    environment: 'development'
-    pool:
-      vmImage: $(vmImageName)
+    jobs:
+    - deployment: Deploy
+      displayName: Deploy
+      environment: 'development'
+      pool:
+        vmImage: $(vmImageName)
 
-    strategy:
-      runOnce:
-        deploy:
+      strategy:
+        runOnce:
+          deploy:
 
-          steps:
-          - task: AzureFunctionApp@1
-            displayName: 'Azure functions app deploy'
-            inputs:
-              azureSubscription: '$(azureSubscription)'
-              appType: functionAppLinux
-              appName: $(functionAppName)
-              package: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'
+            steps:
+            - task: AzureFunctionApp@1
+              displayName: 'Azure functions app deploy'
+              inputs:
+                azureSubscription: '$(azureSubscription)'
+                appType: functionAppLinux
+                appName: $(functionAppName)
+                package: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'
